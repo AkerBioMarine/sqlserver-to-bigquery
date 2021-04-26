@@ -1,9 +1,10 @@
-import os
-from database_to_bigquery.sql_server import SqlServerToCsv, SqlServerToBigquery
 import logging
+import os
 from dataclasses import dataclass
+
 import yaml
 
+from database_to_bigquery.akbm_sql_server import AkbmSqlServerToCsv, AkbmSqlServerToBigquery
 
 logging.basicConfig(level=logging.ERROR,
                     format='%(levelname)s - %(module)s - %(message)s')
@@ -60,7 +61,6 @@ def get_env_config(override_dict) -> Config:
 
 
 def get_config() -> Config:
-
     if os.getenv("SECRETMANAGER_URI", None):
         from google.cloud import secretmanager
 
@@ -85,13 +85,13 @@ if __name__ == '__main__':
     logger.info(f"Connecting to {config.db_username}/{config.db_database}@{config.db_host} and syncing table: "
                 f"{config.db_table} to {config.gcp_bucket}")
 
-    sql_server_to_csv = SqlServerToCsv(username=config.db_username,
-                                       password=config.db_password,
-                                       host=config.db_host,
-                                       database=config.db_database,
-                                       destination=f"gs://{config.gcp_bucket}/sqlserver/{config.gcp_bq_dataset}")
+    sql_server_to_csv = AkbmSqlServerToCsv(username=config.db_username,
+                                           password=config.db_password,
+                                           host=config.db_host,
+                                           database=config.db_database,
+                                           destination=f"gs://{config.gcp_bucket}/sqlserver/{config.gcp_bq_dataset}")
 
-    bigquery = SqlServerToBigquery(sql_server_to_csv=sql_server_to_csv)
+    bigquery = AkbmSqlServerToBigquery(sql_server_to_csv=sql_server_to_csv)
 
     result = bigquery.ingest_table(sql_server_table=config.db_table,
                                    sql_server_schema="dbo",
