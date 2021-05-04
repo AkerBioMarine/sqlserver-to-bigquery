@@ -210,7 +210,22 @@ class SqlServerToCsv(DatabaseToCsv):
         sql_from_view = f"{sql_view} {sql}"
         logger.info(f"GENERATED SPLIT SQL: {sql_from_view}")
         with self.connect() as connection:
-            split_res = connection.execute(sql_from_view)
+            try:
+                split_res = connection.execute(sql_from_view)
+            except Exception as e:
+                logger.error("Got serious error when generating splits.  This is most likely due to the table having "
+                             "columns that are incompatable with CHECKSUM.  Skipping splits and CRC.")
+                logger.error(f"error = {e}")
+                sql_view = self._generate_view_sql(table=table, schema=schema, columns=columns, split_keys=split_keys,
+                                                   split_size=-1)
+                sql = f"select -1 AS split_size," \
+                      f"internal_split, " \
+                      f"count(*) as cnt," \
+                      f"{sql_minmax}" \
+                      f"CURRENT_TIMESTAMP as crc " \
+                      f"from splits group by internal_split"
+                sql_from_view = f"{sql_view} {sql}"
+                split_res = connection.execute(sql_from_view)
             cnt = 0
             for split in split_res:
                 cnt += 1
